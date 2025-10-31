@@ -3,13 +3,13 @@ Script-to-Audio Master  –  Streamlit App
 ----------------------------------------
 • Generates story scripts with OpenAI GPT models
 • Converts them to MP3 audio using gTTS + pydub
-• Fully compatible with Python 3.13 and older versions
+• Fully compatible with Python 3.13+
+• Allows user to input OpenAI API key directly if not set in environment
 """
 
 import os
 import sys
 import tempfile
-import time
 from typing import Tuple, List
 
 import streamlit as st
@@ -36,7 +36,19 @@ from pydub import AudioSegment
 # ---------------------------------------------------------------------
 st.set_page_config(page_title="Script-to-Audio Master", layout="wide")
 
+# --- API key handling -------------------------------------------------
+if "OPENAI_API_KEY" not in os.environ:
+    st.sidebar.warning("No OpenAI API Key found in environment.")
+    input_key = st.sidebar.text_input(
+        "Enter your OpenAI API Key",
+        type="password",
+        help="You can get this from https://platform.openai.com/account/api-keys"
+    )
+    if input_key:
+        os.environ["OPENAI_API_KEY"] = input_key
+        st.sidebar.success("✅ API key loaded for this session.")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+
 DEFAULT_MODEL = os.environ.get("SCRIPT_TO_AUDIO_MODEL", "gpt-4o-mini")
 MAX_TOKENS = 1200
 
@@ -52,7 +64,7 @@ if OPENAI_API_KEY and openai:
 def call_openai_chat(prompt: str, system: str = None,
                      model: str = DEFAULT_MODEL, temperature: float = 0.8) -> str:
     if not OPENAI_API_KEY:
-        st.error("Missing OPENAI_API_KEY in environment (Secrets).")
+        st.error("Please enter a valid OpenAI API key in the sidebar.")
         raise RuntimeError("Missing OPENAI_API_KEY")
     if not openai:
         st.error("openai library not installed.")
@@ -103,7 +115,6 @@ def match_target_amplitude(sound: AudioSegment, target_dBFS: float) -> AudioSegm
         change_in_dBFS = target_dBFS - sound.dBFS
         return sound.apply_gain(change_in_dBFS)
     except Exception:
-        # audioop missing → skip normalization
         return sound
 
 
@@ -222,4 +233,4 @@ with col2:
                     st.exception(e)
 
 st.markdown("---")
-st.caption("Tip: For premium voices, switch to OpenAI TTS or Google Cloud TTS.")
+st.caption("Tip: You can paste your OpenAI API key in the sidebar if it's not stored in your environment.")
