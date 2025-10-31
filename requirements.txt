@@ -1,5 +1,17 @@
+# Core web framework
 streamlit==1.39.0
-openai>=1.50.0
+
+# OpenAI SDK with TTS + GPT-4o support
+openai>=1.52.0
+
+# Google Text-to-Speech
 gtts==2.5.1
+
+# Audio handling and export (requires ffmpeg, added via replit.nix)
 pydub==0.25.1
+
 audioop-lts
+
+# Optional but recommended (for local runs)
+tqdm>=4.66.0
+requests>=2.31.0
