@@ -244,10 +244,10 @@ with col2:
                 if tts_engine == "OpenAI TTS":
                     voices = {
                         "Neutral": "alloy",
-                        "Warm & Narrator": "verse",
-                        "Energetic": "bright",
-                        "Soft / Whisper": "calm",
-                        "Deep & Resonant": "harp"
+                        "Warm & Narrator": "coral",
+                        "Energetic": "onyx",
+                        "Soft / Whisper": "sage",
+                        "Deep & Resonant": "ballad"
                     }
                     v = voices.get(voice_style, "alloy")
                     _, mp3 = text_to_speech_openai(story, voice=v)
