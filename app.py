@@ -2,9 +2,9 @@
 Script-to-Audio Master  –  Streamlit App
 ----------------------------------------
 • Generates story scripts with OpenAI GPT models
-• Converts them to MP3 audio using gTTS + pydub
+• Converts them to MP3 audio using gTTS or OpenAI TTS
 • Fully compatible with Python 3.13+
-• Allows user to input OpenAI API key directly if not set in environment
+• Supports manual API key entry
 """
 
 import os
@@ -42,7 +42,7 @@ if "OPENAI_API_KEY" not in os.environ:
     input_key = st.sidebar.text_input(
         "Enter your OpenAI API Key",
         type="password",
-        help="You can get this from https://platform.openai.com/account/api-keys"
+        help="Get yours at https://platform.openai.com/account/api-keys"
     )
     if input_key:
         os.environ["OPENAI_API_KEY"] = input_key
@@ -120,6 +120,7 @@ def match_target_amplitude(sound: AudioSegment, target_dBFS: float) -> AudioSegm
 
 def text_to_speech_gtts(text: str, lang: str = "en",
                         slow: bool = False, tld: str = "com") -> Tuple[str, bytes]:
+    """Convert text to MP3 using Google gTTS."""
     if gTTS is None:
         raise RuntimeError("gTTS not installed. pip install gtts")
 
@@ -143,6 +144,30 @@ def text_to_speech_gtts(text: str, lang: str = "en",
     with open(out_tmp.name, "rb") as f:
         mp3_bytes = f.read()
     return out_tmp.name, mp3_bytes
+
+
+def text_to_speech_openai(text: str, voice: str = "alloy") -> Tuple[str, bytes]:
+    """Convert text to MP3 using OpenAI TTS API."""
+    if not OPENAI_API_KEY:
+        raise RuntimeError("Missing OpenAI API key for TTS.")
+    try:
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        # Stream the response to save directly to a file
+        with client.audio.speech.with_streaming_response.create(
+            model="gpt-4o-mini-tts",
+            voice=voice,
+            input=text
+        ) as response:
+            tmp_file = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
+            response.stream_to_file(tmp_file.name)
+            tmp_file.close()
+            with open(tmp_file.name, "rb") as f:
+                mp3_bytes = f.read()
+            return tmp_file.name, mp3_bytes
+    except Exception as e:
+        st.error("OpenAI TTS failed. Check API key or model availability.")
+        st.exception(e)
+        raise
 
 
 # --------------------------- Streamlit UI ------------------------------
@@ -171,7 +196,8 @@ with st.sidebar:
     voice_style = st.selectbox("Voice style",
                                ["Neutral", "Warm & Narrator", "Energetic",
                                 "Soft / Whisper", "Deep & Resonant"])
-    tts_speed = st.checkbox("Slow narration", value=False)
+    tts_engine = st.radio("Select TTS Engine", ["OpenAI TTS", "Google gTTS"], index=0)
+    tts_speed = st.checkbox("Slow narration (for gTTS only)", value=False)
     model_choice = st.text_input("OpenAI model", value=DEFAULT_MODEL)
     temperature = st.slider("Creativity", 0.0, 1.2, 0.8)
 
@@ -217,12 +243,25 @@ with col2:
             st.warning("Generate a story first.")
         else:
             story = st.session_state["story"]
-            with st.spinner("Converting to speech..."):
+            with st.spinner(f"Converting to speech using {tts_engine}..."):
                 try:
-                    tld = "co.uk" if voice_style in ["Warm & Narrator", "Deep & Resonant"] \
-                        else "com.au" if voice_style == "Energetic" else "com"
-                    path, mp3_bytes = text_to_speech_gtts(
-                        story, lang=language, slow=tts_speed, tld=tld)
+                    if tts_engine == "OpenAI TTS":
+                        # Select voice based on style
+                        voice_map = {
+                            "Neutral": "alloy",
+                            "Warm & Narrator": "verse",
+                            "Energetic": "bright",
+                            "Soft / Whisper": "calm",
+                            "Deep & Resonant": "harp"
+                        }
+                        voice_choice = voice_map.get(voice_style, "alloy")
+                        path, mp3_bytes = text_to_speech_openai(story, voice=voice_choice)
+                    else:
+                        tld = "co.uk" if voice_style in ["Warm & Narrator", "Deep & Resonant"] \
+                            else "com.au" if voice_style == "Energetic" else "com"
+                        path, mp3_bytes = text_to_speech_gtts(
+                            story, lang=language, slow=tts_speed, tld=tld)
+
                     st.session_state["audio"] = mp3_bytes
                     st.audio(mp3_bytes, format="audio/mp3")
                     st.download_button("Download audio (.mp3)",
@@ -233,4 +272,4 @@ with col2:
                     st.exception(e)
 
 st.markdown("---")
-st.caption("Tip: You can paste your OpenAI API key in the sidebar if it's not stored in your environment.")
+st.caption("Tip: Choose between OpenAI’s high-quality TTS or Google gTTS for multilingual voices.")
