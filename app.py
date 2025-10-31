@@ -49,7 +49,7 @@ if "OPENAI_API_KEY" not in os.environ:
         st.sidebar.success("✅ API key loaded for this session.")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
-DEFAULT_MODEL = os.environ.get("SCRIPT_TO_AUDIO_MODEL", "gpt-4o-mini")
+DEFAULT_MODEL = os.environ.get("SCRIPT_TO_AUDIO_MODEL", "gpt-4o-mini-tts")
 MAX_TOKENS = 1200
 
 if OPENAI_API_KEY and openai:
@@ -194,7 +194,7 @@ with st.sidebar:
                                 ["Short (~400 w)", "Medium (~800 w)", "Long (~1500 w)"])
     language = st.selectbox("Language", ["en", "tr", "es", "fr", "de", "it", "pt"])
     voice_style = st.selectbox("Voice style",
-                               ["Neutral", "Warm & Narrator", "Energetic",
+                              ["Neutral", "Warm & Narrator", "Energetic",
                                 "Soft / Whisper", "Deep & Resonant"])
     tts_engine = st.radio("Select TTS Engine", ["OpenAI TTS", "Google gTTS"], index=0)
     tts_speed = st.checkbox("Slow narration (for gTTS only)", value=False)
@@ -249,10 +249,10 @@ with col2:
                         # Select voice based on style
                         voice_map = {
                             "Neutral": "alloy",
-                            "Warm & Narrator": "verse",
-                            "Energetic": "bright",
-                            "Soft / Whisper": "calm",
-                            "Deep & Resonant": "harp"
+                            "Warm & Narrator": "echo",
+                            "Energetic": "coral",
+                            "Soft / Whisper": "onyx",
+                            "Deep & Resonant": "fable"
                         }
                         voice_choice = voice_map.get(voice_style, "alloy")
                         path, mp3_bytes = text_to_speech_openai(story, voice=voice_choice)
